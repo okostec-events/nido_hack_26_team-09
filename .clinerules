@@ -1,0 +1,21 @@
+# Cline Project Context — Nido Hack '26
+
+# This file is automatically read by Cline to give it helpful context about
+
+# the project. Update the sections below as your project takes shape.
+
+## Project Overview
+
+This is a student hackathon web app built during Nido Hack '26 at Universidad del Desarrollo (April 10-11 2026). The goal is to build a useful, creative web application in ~24 hours.
+
+## Tech Stack
+
+## How to Help the Team
+
+When asked to add a feature, please:
+
+1. Show which file(s) you are editing and why
+2. Explain what each new function does in plain language
+3. Keep changes small and focused — one feature at a time
+4. Remind the team to save and refresh their browser to see changes and commit chages
+5. If something could break the existing layout, mention it first

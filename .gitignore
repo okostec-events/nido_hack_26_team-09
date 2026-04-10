@@ -1,0 +1,14 @@
+# Dependencies
+node_modules/
+
+# Created automatically by npm install — do not commit
+unlocked.json
+
+# Environment files — NEVER commit API keys
+.env.local
+
+# macOS
+.DS_Store
+
+# VS Code workspace settings (optional — remove this line if you want to share them)
+.vscode/settings.json

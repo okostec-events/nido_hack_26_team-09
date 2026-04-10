@@ -1,0 +1,14 @@
+{
+  "name": "hackathon-clicker",
+  "version": "1.0.0",
+  "description": "Nido Hack '26 starter template — edit this to build your project!",
+  "scripts": {
+    "postinstall": "node -e \"require('fs').writeFileSync('unlocked.json', JSON.stringify({installed:true,ts:Date.now()}))\"",
+    "start": "npx --yes serve . -p 3000",
+    "dev":   "npx --yes serve . -p 3000",
+    "deploy": "echo '✅ GitHub Pages auto-deploys from the main branch. Commit and push your changes via GitHub Desktop, and your site will be live at your team URL (https://okostec.github.io/<your-team-repo>) in about 60 seconds.'"
+  },
+  "dependencies": {
+    "canvas-confetti": "^1.9.3"
+  }
+}

@@ -1,0 +1,1234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hackathon Clicker 2026 · Nido</title>
+  <style>
+    /* =============================================
+       COLORS — change these to restyle the whole app
+    ============================================= */
+    :root {
+      --bg:        #0d1117;
+      --surface:   #161b22;
+      --border:    #30363d;
+      --green:     #3fb950;
+      --blue:      #58a6ff;
+      --pink:      #f778ba;
+      --orange:    #ffa657;
+      --yellow:    #e3b341;
+      --text:      #c9d1d9;
+      --muted:     #8b949e;
+      --red:       #ff4444;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Courier New', Courier, monospace;
+      min-height: 100vh;
+      padding: 1rem;
+    }
+
+    /* =============================================
+       HEADER
+    ============================================= */
+    header {
+      text-align: center;
+      padding: 1.25rem 0 1rem;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 1.25rem;
+    }
+
+    .title {
+      font-size: clamp(1.4rem, 4vw, 2rem);
+      font-weight: bold;
+      color: var(--green);
+      text-shadow: 0 0 24px rgba(63, 185, 80, 0.6);
+      letter-spacing: 0.08em;
+    }
+
+    .subtitle {
+      color: var(--muted);
+      font-size: 0.8rem;
+      margin-top: 0.3rem;
+    }
+
+    /* =============================================
+       STATS BAR
+    ============================================= */
+    .stats {
+      display: flex;
+      justify-content: center;
+      gap: clamp(1rem, 4vw, 3rem);
+      margin-bottom: 1.25rem;
+      flex-wrap: wrap;
+    }
+
+    .stat { text-align: center; }
+
+    .stat-value {
+      font-size: 1.5rem;
+      font-weight: bold;
+      color: var(--green);
+      transition: color 0.2s;
+    }
+
+    .stat-label {
+      font-size: 0.7rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    /* =============================================
+       GRID LAYOUT
+    ============================================= */
+    .game-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: auto auto;
+      gap: 1rem;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    @media (max-width: 620px) {
+      .game-grid { grid-template-columns: 1fr; }
+    }
+
+    .full-width { grid-column: 1 / -1; }
+
+    /* =============================================
+       CARDS
+    ============================================= */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1rem;
+    }
+
+    .card-title {
+      font-size: 0.72rem;
+      font-weight: bold;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 0.9rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    /* =============================================
+       CLICK BUTTON
+    ============================================= */
+    .click-zone {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .code-btn {
+      background: #0d1117;
+      border: 2px solid var(--green);
+      color: var(--green);
+      font-family: 'Courier New', monospace;
+      font-size: 1.15rem;
+      font-weight: bold;
+      padding: 1.4rem 1rem;
+      border-radius: 8px;
+      cursor: pointer;
+      width: 100%;
+      text-shadow: 0 0 10px rgba(63,185,80,0.7);
+      box-shadow: 0 0 20px rgba(63,185,80,0.1), inset 0 0 20px rgba(63,185,80,0.04);
+      user-select: none;
+      transition: box-shadow 0.1s, transform 0.08s, border-color 0.1s;
+      letter-spacing: 0.05em;
+    }
+
+    .code-btn:hover {
+      box-shadow: 0 0 35px rgba(63,185,80,0.35), inset 0 0 30px rgba(63,185,80,0.08);
+    }
+
+    .code-btn:active {
+      transform: scale(0.96);
+      box-shadow: 0 0 50px rgba(63,185,80,0.6), inset 0 0 30px rgba(63,185,80,0.15);
+    }
+
+    .cursor { animation: blink 1s step-end infinite; }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+    .click-info {
+      text-align: center;
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+
+    /* =============================================
+       FLOATING +N EFFECT
+    ============================================= */
+    .float-text {
+      position: fixed;
+      font-family: 'Courier New', monospace;
+      font-size: 1rem;
+      font-weight: bold;
+      pointer-events: none;
+      z-index: 999;
+      animation: floatUp 0.9s ease-out forwards;
+    }
+
+    @keyframes floatUp {
+      0%   { transform: translateY(0) scale(1);   opacity: 1; }
+      100% { transform: translateY(-65px) scale(0.8); opacity: 0; }
+    }
+
+    /* =============================================
+       UPGRADES
+    ============================================= */
+    .upgrade-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .upgrade-item {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 0.65rem 0.75rem;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+    }
+
+    .upgrade-item:hover:not(.locked):not(.owned) {
+      border-color: var(--blue);
+      background: rgba(88,166,255,0.05);
+    }
+
+    .upgrade-item.locked  { opacity: 0.35; cursor: not-allowed; }
+    .upgrade-item.owned   { border-color: var(--green); opacity: 0.6; cursor: default; }
+
+    .upgrade-icon { font-size: 1.4rem; flex-shrink: 0; }
+
+    .upgrade-info { flex: 1; min-width: 0; }
+
+    .upgrade-name {
+      font-size: 0.85rem;
+      font-weight: bold;
+      color: var(--text);
+    }
+
+    .upgrade-desc {
+      font-size: 0.72rem;
+      color: var(--muted);
+      margin-top: 0.1rem;
+    }
+
+    .upgrade-cost {
+      font-size: 0.8rem;
+      color: var(--yellow);
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .upgrade-cost.owned-label { color: var(--green); }
+
+    /* =============================================
+       TERMINAL QUESTS
+    ============================================= */
+    .quest-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .quest-item {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 0.75rem;
+      transition: border-color 0.3s;
+    }
+
+    .quest-item.done { border-color: var(--green); opacity: 0.65; }
+
+    .quest-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.5rem;
+      gap: 0.5rem;
+    }
+
+    .quest-name {
+      font-size: 0.85rem;
+      font-weight: bold;
+      color: var(--text);
+    }
+
+    .quest-status {
+      font-size: 0.72rem;
+      color: var(--muted);
+      flex-shrink: 0;
+    }
+
+    .quest-body {
+      font-size: 0.77rem;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    .code-snippet {
+      display: inline-block;
+      background: #000;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 0.25rem 0.55rem;
+      font-family: 'Courier New', monospace;
+      font-size: 0.82rem;
+      color: var(--green);
+      margin: 0.3rem 0;
+    }
+
+    .quest-btn {
+      display: inline-block;
+      background: var(--green);
+      color: #000;
+      border: none;
+      border-radius: 4px;
+      padding: 0.35rem 0.8rem;
+      font-family: 'Courier New', monospace;
+      font-size: 0.75rem;
+      font-weight: bold;
+      cursor: pointer;
+      margin-top: 0.55rem;
+      transition: background 0.15s, transform 0.1s;
+      letter-spacing: 0.03em;
+    }
+
+    .quest-btn:hover  { background: #57d968; }
+    .quest-btn:active { transform: scale(0.96); }
+
+    .quest-reward {
+      font-size: 0.7rem;
+      color: var(--yellow);
+      margin-top: 0.4rem;
+    }
+
+    .quest-completed-badge {
+      display: inline-block;
+      background: rgba(63,185,80,0.15);
+      border: 1px solid rgba(63,185,80,0.4);
+      color: var(--green);
+      font-size: 0.7rem;
+      font-weight: bold;
+      letter-spacing: 0.08em;
+      padding: 0.15rem 0.5rem;
+      border-radius: 4px;
+      margin-bottom: 0.55rem;
+    }
+
+    .quest-body-done {
+      opacity: 0.45;
+    }
+
+    .quest-link {
+      display: inline-block;
+      margin-top: 0.3rem;
+      padding: 0.2rem 0.6rem;
+      border: 1px solid var(--blue);
+      border-radius: 4px;
+      color: var(--blue);
+      font-family: 'Courier New', monospace;
+      font-size: 0.8rem;
+      text-decoration: none;
+      transition: background 0.15s, color 0.15s;
+    }
+
+    .quest-link:hover { background: var(--blue); color: #000; }
+
+    .quest-link-pulse {
+      animation: linkGlow 1.4s ease-in-out infinite;
+    }
+
+    @keyframes linkGlow {
+      0%, 100% { border-color: var(--blue);  color: var(--blue);  box-shadow: none; }
+      50%       { border-color: var(--green); color: var(--green); box-shadow: 0 0 10px rgba(63,185,80,0.5); }
+    }
+
+    .quest-waiting {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-top: 0.55rem;
+      font-size: 0.75rem;
+      color: var(--muted);
+      font-style: italic;
+    }
+
+    .pulse-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--blue);
+      flex-shrink: 0;
+      animation: pulse 1.4s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1;   transform: scale(1);    }
+      50%       { opacity: 0.3; transform: scale(0.7);  }
+    }
+
+    /* =============================================
+       ACHIEVEMENTS
+    ============================================= */
+    .achievements-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(68px, 1fr));
+      gap: 0.5rem;
+    }
+
+    .achievement {
+      text-align: center;
+      padding: 0.5rem 0.25rem;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--bg);
+      cursor: help;
+      opacity: 0.2;
+      filter: grayscale(1);
+      transition: opacity 0.4s, filter 0.4s, border-color 0.4s, box-shadow 0.4s;
+      position: relative;
+    }
+
+    .achievement.unlocked {
+      opacity: 1;
+      filter: none;
+      border-color: var(--yellow);
+      box-shadow: 0 0 10px rgba(227,179,65,0.25);
+    }
+
+    .achievement-icon { font-size: 1.4rem; }
+
+    .achievement-name {
+      font-size: 0.58rem;
+      color: var(--muted);
+      margin-top: 0.2rem;
+      line-height: 1.2;
+    }
+
+    /* =============================================
+       RESET BUTTON
+    ============================================= */
+    .reset-btn {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      border-radius: 4px;
+      padding: 0.25rem 0.6rem;
+      font-family: 'Courier New', monospace;
+      font-size: 0.7rem;
+      cursor: pointer;
+      margin-top: 1rem;
+      float: right;
+      transition: border-color 0.15s, color 0.15s;
+    }
+
+    .reset-btn:hover { border-color: var(--red); color: var(--red); }
+
+    /* =============================================
+       TOAST NOTIFICATION
+    ============================================= */
+    .toast {
+      position: fixed;
+      top: 1rem;
+      right: 1rem;
+      background: var(--surface);
+      border: 1px solid var(--green);
+      border-radius: 8px;
+      padding: 0.75rem 1rem;
+      color: var(--text);
+      font-size: 0.82rem;
+      line-height: 1.5;
+      z-index: 1001;
+      max-width: 280px;
+      animation: toastIn 0.25s ease-out, toastOut 0.3s ease-in 2.8s forwards;
+      pointer-events: none;
+    }
+
+    @keyframes toastIn  { from { transform: translateX(110%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+    @keyframes toastOut { to   { transform: translateX(110%); opacity: 0; } }
+
+    /* =============================================
+       SETUP CHECKLIST
+    ============================================= */
+    .setup-card {
+      border-color: var(--blue);
+      box-shadow: 0 0 18px rgba(88,166,255,0.1);
+    }
+
+    .setup-card.all-done {
+      border-color: var(--green);
+      box-shadow: 0 0 18px rgba(63,185,80,0.1);
+    }
+
+    .setup-card .card-title { border-bottom-color: rgba(88,166,255,0.3); }
+    .setup-card.all-done .card-title { border-bottom-color: rgba(63,185,80,0.3); }
+
+    .setup-steps {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 0.6rem;
+    }
+
+    .setup-step {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.75rem;
+      padding: 0.75rem;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      cursor: pointer;
+      transition: border-color 0.2s, opacity 0.2s;
+    }
+
+    .setup-step:hover { border-color: var(--blue); }
+    .setup-step.checked { opacity: 0.45; border-color: var(--green); }
+
+    .setup-check {
+      width: 18px;
+      height: 18px;
+      border: 2px solid var(--border);
+      border-radius: 3px;
+      flex-shrink: 0;
+      margin-top: 2px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.7rem;
+      color: var(--green);
+      transition: border-color 0.2s, background 0.2s;
+    }
+
+    .setup-step.checked .setup-check {
+      background: var(--green);
+      border-color: var(--green);
+      color: #000;
+    }
+
+    .setup-step-body { flex: 1; min-width: 0; }
+
+    .setup-step-name {
+      font-size: 0.85rem;
+      font-weight: bold;
+      color: var(--text);
+      margin-bottom: 0.2rem;
+    }
+
+    .setup-step.checked .setup-step-name { text-decoration: line-through; color: var(--muted); }
+
+    .setup-step-desc {
+      font-size: 0.72rem;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    .setup-link {
+      display: inline-block;
+      margin-top: 0.35rem;
+      padding: 0.2rem 0.6rem;
+      border: 1px solid var(--blue);
+      border-radius: 4px;
+      color: var(--blue);
+      font-size: 0.72rem;
+      text-decoration: none;
+      transition: background 0.15s, color 0.15s;
+    }
+
+    .setup-link:hover { background: var(--blue); color: #000; }
+
+    .setup-ready {
+      margin-top: 0.75rem;
+      padding: 0.5rem 0.75rem;
+      background: rgba(63,185,80,0.08);
+      border: 1px solid rgba(63,185,80,0.3);
+      border-radius: 6px;
+      font-size: 0.8rem;
+      color: var(--green);
+      text-align: center;
+      display: none;
+    }
+
+    .setup-card.all-done .setup-ready { display: block; }
+
+    /* =============================================
+       CONFETTI CANVAS
+    ============================================= */
+    #confetti-canvas {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      pointer-events: none;
+      z-index: 998;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="title">&gt;_ HACKATHON CLICKER 2026</div>
+  <div class="subtitle">Nido Hack '26 &nbsp;·&nbsp; Universidad del Desarrollo &nbsp;·&nbsp; April 10–11</div>
+</header>
+
+<div class="stats">
+  <div class="stat">
+    <div class="stat-value" id="stat-loc">0</div>
+    <div class="stat-label">Lines of Code</div>
+  </div>
+  <div class="stat">
+    <div class="stat-value" id="stat-ps">0.0</div>
+    <div class="stat-label">Lines / sec</div>
+  </div>
+  <div class="stat">
+    <div class="stat-value" id="stat-mult">1×</div>
+    <div class="stat-label">Multiplier</div>
+  </div>
+</div>
+
+<div class="game-grid">
+
+  <!-- ── SETUP CHECKLIST ── -->
+  <div class="card setup-card full-width" id="setup-card">
+    <div class="card-title">🔧 &nbsp;Setup — do this first on every laptop</div>
+    <div class="setup-steps">
+
+      <div class="setup-step" id="setup-vscode" onclick="toggleSetup('vscode')">
+        <div class="setup-check" id="check-vscode"></div>
+        <div class="setup-step-body">
+          <div class="setup-step-name">1. Install VS Code</div>
+          <div class="setup-step-desc">
+            Free code editor. Download the installer, run it, done.
+            <br>
+            <a class="setup-link" href="https://code.visualstudio.com" target="_blank" onclick="event.stopPropagation()">↗ code.visualstudio.com</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="setup-step" id="setup-node" onclick="toggleSetup('node')">
+        <div class="setup-check" id="check-node"></div>
+        <div class="setup-step-body">
+          <div class="setup-step-name">2. Install Node.js</div>
+          <div class="setup-step-desc">
+            Click the big green <strong>LTS</strong> button. Installs npm too.
+            <br>
+            <a class="setup-link" href="https://nodejs.org" target="_blank" onclick="event.stopPropagation()">↗ nodejs.org</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="setup-step" id="setup-github" onclick="toggleSetup('github')">
+        <div class="setup-check" id="check-github"></div>
+        <div class="setup-step-body">
+          <div class="setup-step-name">3. Install GitHub Desktop</div>
+          <div class="setup-step-desc">
+            How you save and share your code with your team. Download, install, sign in.
+            <br>
+            <a class="setup-link" href="https://desktop.github.com" target="_blank" onclick="event.stopPropagation()">↗ desktop.github.com</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="setup-step" id="setup-cline" onclick="toggleSetup('cline')">
+        <div class="setup-check" id="check-cline"></div>
+        <div class="setup-step-body">
+          <div class="setup-step-name">4. Install Cline (AI helper)</div>
+          <div class="setup-step-desc">
+            Open VS Code → click the <strong>Extensions</strong> icon (4 squares, left sidebar) → search <strong>Cline</strong> → Install.
+          </div>
+        </div>
+      </div>
+
+    </div>
+    <div class="setup-ready">✅ &nbsp;You're all set up — scroll down and start the quests!</div>
+  </div>
+
+  <!-- ── WRITE CODE ── -->
+  <div class="card">
+    <div class="card-title">⌨️ &nbsp;Write Code</div>
+    <div class="click-zone">
+      <button class="code-btn" id="code-btn">
+        &gt;&nbsp;run&nbsp;app.js<span class="cursor">_</span>
+      </button>
+      <div class="click-info" id="click-info">+1 line per click</div>
+    </div>
+  </div>
+
+  <!-- ── UPGRADES ── -->
+  <div class="card">
+    <div class="card-title">🛒 &nbsp;Upgrades</div>
+    <div class="upgrade-list" id="upgrade-list"></div>
+  </div>
+
+  <!-- ── TERMINAL QUESTS ── -->
+  <div class="card">
+    <div class="card-title">💻 &nbsp;Terminal Quests</div>
+    <div class="quest-list" id="quest-list"></div>
+  </div>
+
+  <!-- ── ACHIEVEMENTS ── -->
+  <div class="card full-width">
+    <div class="card-title">🏆 &nbsp;Achievements</div>
+    <div class="achievements-grid" id="achievements-grid"></div>
+    <button class="reset-btn" id="reset-btn">⚠ reset progress</button>
+  </div>
+
+</div>
+
+<canvas id="confetti-canvas"></canvas>
+
+<script>
+// ================================================================
+//  HACKATHON CLICKER 2026 — Nido Hack '26 Starter Template
+//
+//  Everything is in this one file so it's easy to read and edit.
+//  The code is split into clearly labelled sections — feel free
+//  to change anything you like!
+// ================================================================
+
+
+// ----------------------------------------------------------------
+//  UPGRADES
+//  Add more entries here to add new upgrades to the shop.
+// ----------------------------------------------------------------
+const UPGRADES = [
+  {
+    id: 'coffee',
+    icon: '☕',
+    name: 'Coffee Machine',
+    desc: '+1 line/sec — automatic coding',
+    cost: 100,
+    effect: { locPerSec: 1 },
+  },
+  {
+    id: 'stackoverflow',
+    icon: '📚',
+    name: 'Stack Overflow',
+    desc: '+3 click power — copy-paste master',
+    cost: 250,
+    effect: { clickPower: 3 },
+  },
+  {
+    id: 'darktheme',
+    icon: '🌙',
+    name: 'Dark Theme',
+    desc: '+5 lines/sec — unlocks true hacker mode',
+    cost: 800,
+    effect: { locPerSec: 5 },
+  },
+  {
+    id: 'aiassist',
+    icon: '🤖',
+    name: 'AI Assistant',
+    desc: '+20 lines/sec — let the AI cook',
+    cost: 3000,
+    effect: { locPerSec: 20 },
+  },
+  {
+    id: 'flowstate',
+    icon: '⚡',
+    name: 'Flow State',
+    desc: '2× all output — you\'re unstoppable',
+    cost: 8000,
+    effect: { multiplier: 2 },
+  },
+];
+
+
+// ----------------------------------------------------------------
+//  TERMINAL QUESTS
+//  Quests 3 & 4 auto-detect completion so the game rewards
+//  students automatically when they run the real commands.
+// ----------------------------------------------------------------
+const QUESTS = [
+  {
+    id: 'terminal',
+    icon: '🖥️',
+    name: '1. Open the Terminal',
+    instructions: 'In VS Code press <strong>Ctrl+`</strong> (the backtick key, top-left of keyboard) or go to <strong>View → Terminal</strong>. It opens automatically in your project folder — important for the next steps! Then paste:',
+    command: 'echo "I am a hacker"',
+    extra: 'Always use this terminal, not the one built into your Mac or Windows — those won\'t be in the right folder.',
+    reward: '+100 lines &nbsp;+&nbsp; 2× click power',
+    effect: { loc: 100, clickPower: 2 },
+    autoDetect: null,
+  },
+  {
+    id: 'node',
+    icon: '🟢',
+    name: '2. Check Node.js',
+    instructions: 'In the <strong>VS Code terminal</strong> (from quest 1) type:',
+    command: 'node --version',
+    extra: 'You should see something like <span style="color:var(--green)">v20.11.0</span>. That\'s Node.js — it runs JavaScript outside the browser.',
+    reward: '+500 lines &nbsp;+&nbsp; 2 lines/sec',
+    effect: { loc: 500, locPerSec: 2 },
+    autoDetect: null,
+  },
+  {
+    id: 'install',
+    icon: '📦',
+    name: '3. Install Packages',
+    instructions: 'In the <strong>VS Code terminal</strong> — make sure you\'re in the project folder — type:',
+    command: 'npm install',
+    extra: 'This reads <span style="color:var(--blue)">package.json</span> and downloads everything your app needs. Watch them install!',
+    reward: '+1,000 lines &nbsp;+&nbsp; 3 lines/sec &nbsp;+&nbsp; 🎉 confetti',
+    effect: { loc: 1000, locPerSec: 3 },
+    // Auto-detected: postinstall script creates unlocked.json.
+    // Only attempt the fetch when served over HTTP — file:// blocks it.
+    autoDetect: async () => {
+      if (location.protocol === 'file:') return false;
+      try {
+        const r = await fetch('./unlocked.json', { cache: 'no-store' });
+        return r.ok;
+      } catch { return false; }
+    },
+  },
+  {
+    id: 'start',
+    icon: '🚀',
+    name: '4. Launch Your App',
+    instructions: 'In the <strong>VS Code terminal</strong> — make sure you\'re in the project folder — type:',
+    command: 'npm start',
+    extra: () => {
+      const encoded  = btoa(JSON.stringify(state));
+      const href     = `http://localhost:3000?state=${encoded}`;
+      const isDone   = !!state.quests.start;
+      const pulse    = isDone ? '' : 'quest-link-pulse';
+      return `This starts a local web server. Then open:<br>
+        <a class="quest-link ${pulse}" href="${href}" target="_blank">
+          http://localhost:3000
+        </a><br>
+        Your score and progress will carry over automatically.`;
+    },
+    reward: '+2,000 lines &nbsp;+&nbsp; 10× multiplier',
+    effect: { loc: 2000, multiplier: 10 },
+    // Auto-detected: game is now being served over HTTP
+    autoDetect: async () => location.protocol === 'http:' || location.protocol === 'https:',
+  },
+];
+
+
+// ----------------------------------------------------------------
+//  ACHIEVEMENTS
+//  Add a new object to unlock a new badge.
+// ----------------------------------------------------------------
+const ACHIEVEMENTS = [
+  { id: 'first_click',   icon: '🖱️',  name: 'First Click',     desc: 'Write your first line of code',         check: s => s.totalClicks >= 1 },
+  { id: 'hello_world',   icon: '👋',  name: 'Hello World!',    desc: 'Reach 10 lines',                        check: s => s.loc >= 10 },
+  { id: 'compiles',      icon: '✅',  name: 'It Compiles!',    desc: 'Reach 100 lines',                       check: s => s.loc >= 100 },
+  { id: 'first_bug',     icon: '🐛',  name: 'First Bug',       desc: 'Buy your first upgrade',                check: s => Object.keys(s.upgrades).length >= 1 },
+  { id: 'caffeinated',   icon: '☕',  name: 'Caffeinated',     desc: 'Buy the Coffee Machine',                check: s => !!s.upgrades.coffee },
+  { id: 'mvp',           icon: '🚀',  name: 'Ship It!',        desc: 'Reach 1,000 lines',                     check: s => s.loc >= 1000 },
+  { id: 'terminal_lord', icon: '⌨️',  name: 'Terminal Lord',   desc: 'Open the terminal',                     check: s => !!s.quests.terminal },
+  { id: 'hacker',        icon: '👾',  name: 'Hacker',          desc: 'Complete all terminal quests',          check: s => QUESTS.every(q => s.quests[q.id]) },
+  { id: 'nocturnal',     icon: '🦇',  name: 'Nocturnal',       desc: 'Buy the Dark Theme',                    check: s => !!s.upgrades.darktheme },
+  { id: 'speed_runner',  icon: '⚡',  name: 'Speed Runner',    desc: 'Reach 10 lines/sec passively',          check: s => s.locPerSec >= 10 },
+  { id: 'ai_friend',     icon: '🤖',  name: 'AI Friend',       desc: 'Buy the AI Assistant',                  check: s => !!s.upgrades.aiassist },
+  { id: 'legend',        icon: '🏆',  name: 'Legend',          desc: 'Reach 10,000 lines',                    check: s => s.loc >= 10000 },
+];
+
+
+// ----------------------------------------------------------------
+//  GAME STATE
+//  All game data lives here. Saved to localStorage automatically.
+// ----------------------------------------------------------------
+const SAVE_KEY = 'nido-hack-clicker-v1';
+
+let state = {
+  loc:         0,   // lines of code (the currency)
+  clickPower:  1,   // lines earned per click
+  locPerSec:   0,   // passive income per second
+  multiplier:  1,   // global multiplier applied to everything
+  totalClicks: 0,   // lifetime click count
+  upgrades:    {},  // { upgradeId: true }
+  quests:      {},  // { questId: true }
+  achievements:{},  // { achievementId: true }
+};
+
+
+// ----------------------------------------------------------------
+//  SAVE / LOAD / RESET
+// ----------------------------------------------------------------
+function saveGame() {
+  try { localStorage.setItem(SAVE_KEY, JSON.stringify(state)); }
+  catch(e) { console.warn('Save failed:', e); }
+}
+
+function loadGame() {
+  try {
+    const raw = localStorage.getItem(SAVE_KEY);
+    if (raw) state = { ...state, ...JSON.parse(raw) };
+  } catch(e) { console.warn('Load failed:', e); }
+}
+
+function resetGame() {
+  if (!confirm('Wipe ALL progress and start over?')) return;
+  localStorage.removeItem(SAVE_KEY);
+  localStorage.removeItem(SETUP_KEY);
+  state = { loc:0, clickPower:1, locPerSec:0, multiplier:1, totalClicks:0, upgrades:{}, quests:{}, achievements:{} };
+  renderAll();
+  renderSetup({});
+  showToast('🔄 Reset! Start fresh.');
+}
+
+
+// ----------------------------------------------------------------
+//  CORE ACTIONS
+// ----------------------------------------------------------------
+function addLOC(amount, fromClick = false, clientX = 0, clientY = 0) {
+  const earned = Math.max(1, Math.floor(amount * state.multiplier));
+  state.loc += earned;
+  if (fromClick) {
+    state.totalClicks++;
+    spawnFloat(`+${earned}`, clientX, clientY);
+  }
+  updateStats();
+  checkAchievements();
+}
+
+function buyUpgrade(id) {
+  const u = UPGRADES.find(u => u.id === id);
+  if (!u || state.upgrades[id]) return;
+  if (state.loc < u.cost) { showToast(`Need ${fmt(u.cost)} lines first!`); return; }
+
+  state.loc -= u.cost;
+  state.upgrades[id] = true;
+  if (u.effect.locPerSec)   state.locPerSec   += u.effect.locPerSec;
+  if (u.effect.clickPower)  state.clickPower  += u.effect.clickPower;
+  if (u.effect.multiplier)  state.multiplier  *= u.effect.multiplier;
+
+  showToast(`🎉 ${u.name} unlocked!`);
+  if (id === 'flowstate') launchConfetti();
+  renderUpgrades();
+  updateStats();
+  saveGame();
+  checkAchievements();
+}
+
+function completeQuest(id) {
+  const q = QUESTS.find(q => q.id === id);
+  if (!q || state.quests[id]) return;
+
+  state.quests[id] = true;
+  const e = q.effect;
+  if (e.loc)        state.loc        += e.loc;
+  if (e.locPerSec)  state.locPerSec  += e.locPerSec;
+  if (e.clickPower) state.clickPower += e.clickPower;
+  if (e.multiplier) state.multiplier *= e.multiplier;
+
+  launchConfetti();
+  showToast(`✅ Quest done: ${q.name}!<br><span style="color:var(--yellow)">${q.reward}</span>`);
+  renderQuests();
+  updateStats();
+  saveGame();
+  checkAchievements();
+}
+
+function checkAchievements() {
+  let changed = false;
+  ACHIEVEMENTS.forEach(a => {
+    if (!state.achievements[a.id] && a.check(state)) {
+      state.achievements[a.id] = true;
+      showToast(`🏆 Achievement unlocked!<br><strong>${a.icon} ${a.name}</strong>`);
+      changed = true;
+    }
+  });
+  if (changed) { renderAchievements(); saveGame(); }
+}
+
+async function autoDetectQuests() {
+  for (const q of QUESTS) {
+    if (q.autoDetect && !state.quests[q.id]) {
+      const detected = await q.autoDetect();
+      if (detected) completeQuest(q.id);
+    }
+  }
+}
+
+// Poll every 2 seconds so detection fires even if the student
+// runs npm install / npm start after the page was already open.
+setInterval(autoDetectQuests, 2000);
+
+
+// ----------------------------------------------------------------
+//  RENDERING
+// ----------------------------------------------------------------
+function fmt(n) {
+  if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M';
+  if (n >= 1e3) return (n / 1e3).toFixed(1) + 'K';
+  return Math.floor(n).toLocaleString();
+}
+
+function updateStats() {
+  document.getElementById('stat-loc').textContent  = fmt(state.loc);
+  document.getElementById('stat-ps').textContent   = (state.locPerSec * state.multiplier).toFixed(1);
+  document.getElementById('stat-mult').textContent = state.multiplier.toFixed(0) + '×';
+  document.getElementById('click-info').textContent =
+    `+${Math.max(1, Math.floor(state.clickPower * state.multiplier))} line${state.clickPower * state.multiplier !== 1 ? 's' : ''} per click`;
+}
+
+function renderUpgrades() {
+  document.getElementById('upgrade-list').innerHTML = UPGRADES.map(u => {
+    const owned     = !!state.upgrades[u.id];
+    const canAfford = state.loc >= u.cost;
+    const cls       = owned ? 'owned' : (!canAfford ? 'locked' : '');
+    const costLabel = owned
+      ? `<span class="upgrade-cost owned-label">✅ owned</span>`
+      : `<span class="upgrade-cost">${fmt(u.cost)} loc</span>`;
+    return `
+      <div class="upgrade-item ${cls}" onclick="buyUpgrade('${u.id}')">
+        <div class="upgrade-icon">${u.icon}</div>
+        <div class="upgrade-info">
+          <div class="upgrade-name">${u.name}</div>
+          <div class="upgrade-desc">${u.desc}</div>
+        </div>
+        ${costLabel}
+      </div>`;
+  }).join('');
+}
+
+function renderQuests() {
+  document.getElementById('quest-list').innerHTML = QUESTS.map(q => {
+    const done         = !!state.quests[q.id];
+    const isAutoDetect = !!q.autoDetect;
+
+    return `
+      <div class="quest-item ${done ? 'done' : ''}">
+
+        <div class="quest-header">
+          <span class="quest-name">${q.icon} ${q.name}</span>
+          <span class="quest-status">${done ? '✅ done' : '🔒'}</span>
+        </div>
+
+        ${done ? '<div class="quest-completed-badge">COMPLETED</div>' : ''}
+
+        <div class="quest-body ${done ? 'quest-body-done' : ''}">
+          ${q.instructions}<br>
+          <code class="code-snippet">${q.command}</code>
+          ${q.extra ? `<br><br>${typeof q.extra === 'function' ? q.extra() : q.extra}` : ''}
+        </div>
+
+        ${!done
+          ? isAutoDetect
+            ? `<div class="quest-waiting">
+                 <span class="pulse-dot"></span>
+                 Waiting — run the command above to unlock automatically…
+               </div>`
+            : `<button class="quest-btn" onclick="completeQuest('${q.id}')">✓ I DID IT — UNLOCK</button>`
+          : ''
+        }
+
+        <div class="quest-reward">${q.reward}</div>
+
+      </div>`;
+  }).join('');
+}
+
+function renderAchievements() {
+  document.getElementById('achievements-grid').innerHTML = ACHIEVEMENTS.map(a => `
+    <div class="achievement ${state.achievements[a.id] ? 'unlocked' : ''}" title="${a.name}: ${a.desc}">
+      <div class="achievement-icon">${a.icon}</div>
+      <div class="achievement-name">${a.name}</div>
+    </div>`
+  ).join('');
+}
+
+function renderAll() {
+  updateStats();
+  renderUpgrades();
+  renderQuests();
+  renderAchievements();
+}
+
+
+// ----------------------------------------------------------------
+//  FLOATING +N EFFECT
+// ----------------------------------------------------------------
+function spawnFloat(text, x, y) {
+  const el = document.createElement('div');
+  el.className = 'float-text';
+  el.textContent = text;
+  el.style.color  = state.multiplier >= 10 ? 'var(--pink)' : state.multiplier >= 2 ? 'var(--orange)' : 'var(--green)';
+  el.style.left   = (x - 16) + 'px';
+  el.style.top    = (y - 16) + 'px';
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 950);
+}
+
+
+// ----------------------------------------------------------------
+//  CONFETTI
+//  Built-in canvas confetti — no CDN needed.
+//  Feel free to replace with canvas-confetti from npm after install!
+// ----------------------------------------------------------------
+const cCanvas = document.getElementById('confetti-canvas');
+const cCtx    = cCanvas.getContext('2d');
+let   cParts  = [];
+
+function launchConfetti() {
+  cCanvas.width  = window.innerWidth;
+  cCanvas.height = window.innerHeight;
+  const colors = ['#3fb950','#58a6ff','#f778ba','#e3b341','#ffa657','#ffffff'];
+  for (let i = 0; i < 120; i++) {
+    cParts.push({
+      x:    Math.random() * cCanvas.width,
+      y:    Math.random() * cCanvas.height * 0.5 - cCanvas.height * 0.2,
+      w:    Math.random() * 10 + 4,
+      h:    Math.random() * 5 + 2,
+      color: colors[Math.floor(Math.random() * colors.length)],
+      rot:  Math.random() * Math.PI * 2,
+      rotV: (Math.random() - 0.5) * 0.15,
+      vy:   Math.random() * 3.5 + 1.5,
+      vx:   (Math.random() - 0.5) * 1.5,
+    });
+  }
+  if (cParts.length > 0) requestAnimationFrame(tickConfetti);
+}
+
+function tickConfetti() {
+  cCtx.clearRect(0, 0, cCanvas.width, cCanvas.height);
+  cParts = cParts.filter(p => p.y < cCanvas.height + 20);
+  cParts.forEach(p => {
+    p.y   += p.vy;
+    p.x   += p.vx;
+    p.rot += p.rotV;
+    cCtx.save();
+    cCtx.translate(p.x, p.y);
+    cCtx.rotate(p.rot);
+    cCtx.fillStyle = p.color;
+    cCtx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+    cCtx.restore();
+  });
+  if (cParts.length > 0) requestAnimationFrame(tickConfetti);
+  else cCtx.clearRect(0, 0, cCanvas.width, cCanvas.height);
+}
+
+
+// ----------------------------------------------------------------
+//  TOAST NOTIFICATION
+// ----------------------------------------------------------------
+function showToast(html) {
+  document.querySelectorAll('.toast').forEach(t => t.remove());
+  const t = document.createElement('div');
+  t.className   = 'toast';
+  t.innerHTML   = html;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3200);
+}
+
+
+// ----------------------------------------------------------------
+//  CLICK HANDLER
+// ----------------------------------------------------------------
+document.getElementById('code-btn').addEventListener('click', e => {
+  addLOC(state.clickPower, true, e.clientX, e.clientY);
+  renderUpgrades(); // refresh affordability colours
+});
+
+
+// ----------------------------------------------------------------
+//  PASSIVE INCOME LOOP  (runs 20× per second)
+// ----------------------------------------------------------------
+setInterval(() => {
+  if (state.locPerSec > 0) {
+    state.loc += (state.locPerSec * state.multiplier) / 20;
+    updateStats();
+  }
+  // Autosave roughly every 5 seconds
+  if (Math.random() < 0.01) saveGame();
+}, 50);
+
+
+// ----------------------------------------------------------------
+//  RESET BUTTON
+// ----------------------------------------------------------------
+document.getElementById('reset-btn').addEventListener('click', resetGame);
+
+
+// ----------------------------------------------------------------
+//  SETUP CHECKLIST
+//  Tracks which install steps the student has ticked.
+//  State is stored separately from the game save so a reset
+//  doesn't make them re-tick the installs.
+// ----------------------------------------------------------------
+const SETUP_KEY = 'nido-hack-setup-v1';
+const SETUP_ITEMS = ['vscode', 'node', 'github', 'cline'];
+
+function loadSetup() {
+  try { return JSON.parse(localStorage.getItem(SETUP_KEY)) || {}; }
+  catch { return {}; }
+}
+
+function saveSetup(s) {
+  try { localStorage.setItem(SETUP_KEY, JSON.stringify(s)); }
+  catch {}
+}
+
+function toggleSetup(id) {
+  const s = loadSetup();
+  s[id] = !s[id];
+  saveSetup(s);
+  renderSetup(s);
+}
+
+function renderSetup(s) {
+  SETUP_ITEMS.forEach(id => {
+    const step  = document.getElementById('setup-' + id);
+    const check = document.getElementById('check-' + id);
+    if (!step || !check) return;
+    step.classList.toggle('checked', !!s[id]);
+    check.textContent = s[id] ? '✓' : '';
+  });
+  const allDone = SETUP_ITEMS.every(id => !!s[id]);
+  document.getElementById('setup-card').classList.toggle('all-done', allDone);
+}
+
+renderSetup(loadSetup());
+
+
+// ----------------------------------------------------------------
+//  STARTUP
+// ----------------------------------------------------------------
+// Import state carried over from file:// via URL param
+(function importURLState() {
+  try {
+    const param = new URLSearchParams(location.search).get('state');
+    if (!param) return;
+    const imported = JSON.parse(atob(param));
+    state = { ...state, ...imported };
+    saveGame(); // Persist to this origin's localStorage
+    history.replaceState({}, '', location.pathname); // Clean the URL
+    console.log('Progress imported from previous session ✅');
+  } catch(e) {
+    console.warn('State import failed:', e);
+  }
+})();
+
+loadGame();
+renderAll();
+autoDetectQuests();
+
+if (state.totalClicks === 0) {
+  setTimeout(() => showToast('👾 Welcome to Hackathon Clicker!<br>Click the button to write code!'), 600);
+}
+</script>
+
+</body>
+</html>
