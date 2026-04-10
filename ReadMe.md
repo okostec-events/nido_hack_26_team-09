@@ -49,7 +49,7 @@ git pull
 npm run deploy
 ```
 
-Your live URL will be set up by your mentor before the event. Once GitHub Pages is enabled on your repo, the pattern is **https://okostec-events.github.io/nido_hack_26_team-XX/**
+Your live URL will be set up by your mentor before the event. Once GitHub Pages is enabled on your repo, the pattern is **https://okostec-events.github.io/nido_hack_26_team-09/**
 
 ---
 
