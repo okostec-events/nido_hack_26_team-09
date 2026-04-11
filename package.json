@@ -1,14 +1,31 @@
 {
-  "name": "hackathon-clicker",
-  "version": "1.0.0",
-  "description": "Nido Hack '26 starter template — edit this to build your project!",
+  "name": "gridscope",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
   "scripts": {
-    "postinstall": "node -e \"require('fs').writeFileSync('unlocked.json', JSON.stringify({installed:true,ts:Date.now()}))\"",
-    "start": "npx --yes serve . -p 3000",
-    "dev":   "npx --yes serve . -p 3000",
-    "deploy": "echo '✅ GitHub Pages auto-deploys from the main branch. Commit and push your changes via GitHub Desktop, and your site will be live at your team URL (https://okostec.github.io/<your-team-repo>) in about 60 seconds.'"
+    "dev": "vite",
+    "build": "vite build",
+    "lint": "eslint .",
+    "preview": "vite preview"
   },
   "dependencies": {
-    "canvas-confetti": "^1.9.3"
+    "@tailwindcss/vite": "^4.2.2",
+    "framer-motion": "^12.38.0",
+    "lucide-react": "^1.8.0",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "tailwindcss": "^4.2.2"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.4",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.1",
+    "eslint": "^9.39.4",
+    "eslint-plugin-react-hooks": "^7.0.1",
+    "eslint-plugin-react-refresh": "^0.5.2",
+    "globals": "^17.4.0",
+    "vite": "^8.0.4"
   }
 }
