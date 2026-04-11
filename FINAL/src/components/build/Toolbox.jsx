@@ -18,6 +18,8 @@ export default function Toolbox({ budget, totalBudget, onDragStart }) {
       flexDirection: 'column',
       gap: 8,
       borderRadius: 0,
+      userSelect: 'none',
+      WebkitUserSelect: 'none',
     }}>
       {/* Budget */}
       <div>

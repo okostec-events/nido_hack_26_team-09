@@ -79,6 +79,8 @@ export default function InfraTile({ infra, canAfford, onDragStart }) {
       onPointerDown={handlePointerDown}
       onPointerUp={handlePointerUp}
       onPointerCancel={handlePointerUp}
+      onDragStart={(e) => e.preventDefault()}
+      draggable={false}
       style={{
         width: '100%',
         height: 72,
@@ -93,6 +95,9 @@ export default function InfraTile({ infra, canAfford, onDragStart }) {
         opacity: canAfford ? 1 : 0.4,
         transition: 'all 200ms',
         position: 'relative',
+        userSelect: 'none',
+        WebkitUserSelect: 'none',
+        touchAction: 'none',
       }}
       onMouseEnter={e => {
         if (canAfford) {
