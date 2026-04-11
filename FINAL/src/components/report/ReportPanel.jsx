@@ -26,7 +26,7 @@ export default function ReportPanel({ scores, cells, budget, totalBudget }) {
   const avgSolar = cells.length > 0 ? Math.round(cells.reduce((s, c) => s + c.solarIndex, 0) / cells.length) : 0;
   const avgWind = cells.length > 0 ? Math.round(cells.reduce((s, c) => s + c.windIndex, 0) / cells.length) : 0;
   const avgFlood = cells.length > 0 ? Math.round(cells.reduce((s, c) => s + c.floodRisk, 0) / cells.length) : 0;
-  const temps = cells.map(c => c.temperature);
+  const temps = cells.length > 0 ? cells.map(c => c.temperature) : [0];
   const minTemp = Math.min(...temps);
   const maxTemp = Math.max(...temps);
 

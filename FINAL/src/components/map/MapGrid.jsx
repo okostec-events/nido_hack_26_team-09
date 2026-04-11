@@ -1,6 +1,7 @@
 import { memo, useState, useCallback, useMemo, useEffect, useRef } from 'react';
-import { GRID_COLS, GRID_ROWS } from '../../utils/gridGenerator';
-import { getViewBox, gridToScreen, TILE_HEIGHT } from '../../utils/isometric';
+import { GRID_COLS, GRID_ROWS, getSettlements } from '../../utils/gridGenerator';
+import { getViewBox, TILE_WIDTH, TILE_HEIGHT, gridToScreen } from '../../utils/isometric';
+import { useApp } from '../../contexts/AppContext';
 import IsometricTile from './IsometricTile';
 import ConnectionLines from './ConnectionLines';
 import DataAttribution from './DataAttribution';
@@ -19,11 +20,15 @@ const MapGrid = memo(function MapGrid({
   interactive = true,
   style = {},
 }) {
+  const { selectedRegion } = useApp();
   const vb = useMemo(() => getViewBox(GRID_COLS, GRID_ROWS), []);
   const [loadPhase, setLoadPhase] = useState(() =>
     cells.length > 0 && hasAnimatedOnce ? 'done' : 'idle'
   );
   const prevCellCount = useRef(cells.length > 0 && hasAnimatedOnce ? cells.length : 0);
+
+  // 3D perspective toggle
+  const [is3D, setIs3D] = useState(false);
 
   // Zoom & pan state
   const [zoom, setZoom] = useState(1);
@@ -35,16 +40,20 @@ const MapGrid = memo(function MapGrid({
   // Tooltip position
   const [tooltipPos, setTooltipPos] = useState(null);
 
+  // Settlement labels for current region
+  const settlements = useMemo(() => {
+    if (!selectedRegion) return [];
+    return getSettlements(selectedRegion.id || selectedRegion);
+  }, [selectedRegion]);
+
   // Cascade animation
   useEffect(() => {
     if (cells.length > 0 && prevCellCount.current === 0 && !hasAnimatedOnce) {
       hasAnimatedOnce = true;
       setLoadPhase('cascade');
-      const t1 = setTimeout(() => setLoadPhase('flat'), 1600);
-      const t2 = setTimeout(() => setLoadPhase('transition3d'), 2100);
-      const t3 = setTimeout(() => setLoadPhase('done'), 3300);
+      const t1 = setTimeout(() => setLoadPhase('done'), 1200);
       prevCellCount.current = cells.length;
-      return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
+      return () => { clearTimeout(t1); };
     }
     if (cells.length > 0 && hasAnimatedOnce) {
       setLoadPhase('done');
@@ -56,8 +65,6 @@ const MapGrid = memo(function MapGrid({
       setLoadPhase('idle');
     }
   }, [cells.length]);
-
-  const show3D = loadPhase === 'transition3d' || loadPhase === 'done';
 
   const sortedCells = useMemo(() => {
     return [...cells].sort((a, b) => {
@@ -72,15 +79,13 @@ const MapGrid = memo(function MapGrid({
   const handleWheel = useCallback((e) => {
     if (!interactive) return;
     e.preventDefault();
-    const delta = e.deltaY > 0 ? 0.9 : 1.1;
-    setZoom(prev => Math.max(0.4, Math.min(4, prev * delta)));
+    const delta = e.deltaY > 0 ? 0.92 : 1.08;
+    setZoom(prev => Math.max(0.3, Math.min(5, prev * delta)));
   }, [interactive]);
 
   // Pan handlers
   const handlePanStart = useCallback((e) => {
     if (!interactive) return;
-    // Only pan on middle-click or when holding space, or right-drag
-    // For simplicity: any mousedown on the background starts pan
     if (e.target.tagName === 'svg' || e.target.tagName === 'DIV') {
       setIsPanning(true);
       panStart.current = { x: e.clientX, y: e.clientY, panX: pan.x, panY: pan.y };
@@ -115,6 +120,8 @@ const MapGrid = memo(function MapGrid({
     };
   }, [handlePanEnd, handlePanMove]);
 
+  const zoomPct = Math.round(zoom * 100);
+
   return (
     <div
       ref={containerRef}
@@ -128,7 +135,7 @@ const MapGrid = memo(function MapGrid({
         justifyContent: 'center',
         position: 'relative',
         overflow: 'hidden',
-        cursor: isPanning ? 'grabbing' : 'default',
+        cursor: isPanning ? 'grabbing' : 'grab',
         ...style,
       }}
     >
@@ -136,7 +143,7 @@ const MapGrid = memo(function MapGrid({
       <div style={{
         position: 'absolute',
         inset: 0,
-        background: 'radial-gradient(ellipse at center, transparent 50%, var(--bg-primary) 100%)',
+        background: 'radial-gradient(ellipse at center, transparent 60%, var(--bg-primary) 100%)',
         pointerEvents: 'none',
         zIndex: 2,
       }} />
@@ -148,34 +155,24 @@ const MapGrid = memo(function MapGrid({
 
       <div
         style={{
-          transition: show3D ? 'transform 1.2s cubic-bezier(0.34, 1.4, 0.64, 1)' : 'none',
-          transform: `
-            ${show3D ? 'perspective(1000px) rotateX(55deg) rotateZ(-45deg)' : ''}
-            translate(${pan.x}px, ${pan.y}px)
-            scale(${show3D ? 0.82 * zoom : zoom})
-          `,
+          transform: is3D
+            ? `perspective(1200px) rotateX(50deg) rotateZ(-45deg) translate(${pan.x}px, ${pan.y}px) scale(${zoom * 0.75})`
+            : `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
           transformOrigin: 'center center',
+          transition: isPanning ? 'none' : 'transform 0.6s cubic-bezier(0.34, 1.2, 0.64, 1)',
         }}
       >
         <svg
           viewBox={`${vb.x} ${vb.y} ${vb.width} ${vb.height}`}
           style={{
-            width: vb.width * 1.8,
-            height: vb.height * 1.8,
+            width: vb.width * 1.2,
+            height: vb.height * 1.2,
           }}
         >
-          <defs>
-            <linearGradient id="mountainGrad" x1="0" y1="1" x2="0" y2="0">
-              <stop offset="0%" stopColor="#5A5A6A" />
-              <stop offset="50%" stopColor="#8A8A9A" />
-              <stop offset="80%" stopColor="#E0E0E8" />
-            </linearGradient>
-          </defs>
-
           <ConnectionLines cells={cells} />
 
           {showTiles && sortedCells.map((cell) => {
-            const rowDelay = cell.y * 100;
+            const rowDelay = (cell.y + cell.x) * 30;
             return (
               <g
                 key={`${cell.x}-${cell.y}`}
@@ -198,33 +195,179 @@ const MapGrid = memo(function MapGrid({
             );
           })}
 
-          <g transform={`translate(${vb.x + vb.width - 10}, ${vb.y + vb.height - 20})`}>
+          {/* Settlement labels */}
+          {showTiles && settlements.map((s) => {
+            const { screenX, screenY } = gridToScreen(s.x, s.y, 0);
+            return (
+              <g key={s.name} transform={`translate(${screenX + TILE_WIDTH / 2}, ${screenY - 6})`}>
+                {/* Label background */}
+                <rect
+                  x={-30} y={-10}
+                  width={60} height={14}
+                  rx={3}
+                  fill="rgba(11, 15, 20, 0.75)"
+                  stroke="rgba(255,255,255,0.12)"
+                  strokeWidth={0.5}
+                />
+                {/* Settlement dot */}
+                <circle cx={-22} cy={-3} r={2} fill="#FFD54F" opacity={0.8} />
+                {/* Label text */}
+                <text
+                  x={0}
+                  y={-1}
+                  textAnchor="middle"
+                  style={{
+                    fontFamily: "'DM Sans', sans-serif",
+                    fontSize: 7,
+                    fontWeight: 600,
+                    fill: 'rgba(255,255,255,0.85)',
+                    letterSpacing: 0.5,
+                  }}
+                >
+                  {s.name}
+                </text>
+              </g>
+            );
+          })}
+
+          <g transform={`translate(${vb.x + vb.width - 50}, ${vb.y + vb.height - 30})`}>
             <DataAttribution />
           </g>
         </svg>
       </div>
 
-      {/* Zoom controls */}
+      {/* Side controls panel */}
       {interactive && (
         <div style={{
           position: 'absolute',
-          bottom: 12,
           right: 12,
+          top: '50%',
+          transform: 'translateY(-50%)',
           display: 'flex',
           flexDirection: 'column',
+          alignItems: 'center',
           gap: 4,
           zIndex: 5,
+          background: 'var(--glass-bg)',
+          backdropFilter: 'blur(12px)',
+          border: '1px solid var(--glass-border)',
+          borderRadius: 10,
+          padding: '8px 4px',
         }}>
-          <ZoomBtn label="+" onClick={() => setZoom(z => Math.min(4, z * 1.25))} />
-          <ZoomBtn label="−" onClick={() => setZoom(z => Math.max(0.4, z * 0.8))} />
+          {/* Zoom In */}
+          <ZoomBtn label="+" onClick={() => setZoom(z => Math.min(5, z * 1.25))} />
+
+          {/* Zoom slider */}
+          <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            height: 120,
+            padding: '4px 0',
+          }}>
+            <input
+              type="range"
+              min={30}
+              max={500}
+              value={zoomPct}
+              onChange={(e) => setZoom(parseInt(e.target.value) / 100)}
+              style={{
+                writingMode: 'vertical-lr',
+                direction: 'rtl',
+                width: 20,
+                height: 110,
+                appearance: 'none',
+                WebkitAppearance: 'none',
+                background: 'transparent',
+                cursor: 'pointer',
+              }}
+              className="zoom-slider"
+            />
+          </div>
+
+          {/* Zoom Out */}
+          <ZoomBtn label="−" onClick={() => setZoom(z => Math.max(0.3, z * 0.8))} />
+
+          {/* Zoom level indicator */}
+          <div style={{
+            fontFamily: "'JetBrains Mono', monospace",
+            fontSize: 8,
+            color: 'var(--text-muted)',
+            marginTop: 2,
+          }}>
+            {zoomPct}%
+          </div>
+
+          {/* Separator */}
+          <div style={{ width: 16, height: 1, background: 'var(--glass-border)', margin: '4px 0' }} />
+
+          {/* Reset */}
           <ZoomBtn label="⟲" onClick={() => { setZoom(1); setPan({ x: 0, y: 0 }); }} />
+
+          {/* Fit to view */}
+          <ZoomBtn label="⊞" onClick={() => { setZoom(0.85); setPan({ x: 0, y: 0 }); }} />
+
+          {/* Separator */}
+          <div style={{ width: 16, height: 1, background: 'var(--glass-border)', margin: '4px 0' }} />
+
+          {/* 3D Toggle */}
+          <button
+            onClick={(e) => { e.stopPropagation(); setIs3D(prev => !prev); }}
+            style={{
+              width: 28,
+              height: 28,
+              borderRadius: 6,
+              border: `1px solid ${is3D ? '#00E676' : 'var(--glass-border)'}`,
+              background: is3D ? 'rgba(0,230,118,0.15)' : 'transparent',
+              color: is3D ? '#00E676' : 'var(--text-secondary)',
+              fontSize: 9,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontFamily: "'Space Mono', monospace",
+              fontWeight: 700,
+              transition: 'all 200ms',
+            }}
+            title={is3D ? 'Switch to 2D flat view' : 'Switch to 3D perspective'}
+          >
+            3D
+          </button>
         </div>
       )}
 
       <style>{`
         @keyframes tileAppear {
-          from { opacity: 0; transform: scale(0.7); }
+          from { opacity: 0; transform: scale(0.85); }
           to { opacity: 1; transform: scale(1); }
+        }
+        .zoom-slider::-webkit-slider-track {
+          width: 3px;
+          background: var(--bg-surface);
+          border-radius: 2px;
+        }
+        .zoom-slider::-webkit-slider-thumb {
+          -webkit-appearance: none;
+          width: 12px;
+          height: 12px;
+          border-radius: 50%;
+          background: #00E676;
+          cursor: pointer;
+          border: 2px solid var(--bg-primary);
+          box-shadow: 0 0 6px rgba(0,230,118,0.4);
+        }
+        .zoom-slider::-moz-range-track {
+          width: 3px;
+          background: var(--bg-surface);
+          border-radius: 2px;
+        }
+        .zoom-slider::-moz-range-thumb {
+          width: 12px;
+          height: 12px;
+          border-radius: 50%;
+          background: #00E676;
+          cursor: pointer;
+          border: 2px solid var(--bg-primary);
         }
       `}</style>
     </div>
@@ -240,18 +383,18 @@ function ZoomBtn({ label, onClick }) {
         height: 28,
         borderRadius: 6,
         border: '1px solid var(--glass-border)',
-        background: 'var(--glass-bg)',
+        background: 'transparent',
         color: 'var(--text-secondary)',
         fontSize: 16,
         cursor: 'pointer',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        backdropFilter: 'blur(8px)',
         fontFamily: "'Space Mono', monospace",
+        transition: 'all 150ms',
       }}
       onMouseEnter={e => { e.target.style.background = 'var(--bg-tertiary)'; e.target.style.color = 'white'; }}
-      onMouseLeave={e => { e.target.style.background = 'var(--glass-bg)'; e.target.style.color = 'var(--text-secondary)'; }}
+      onMouseLeave={e => { e.target.style.background = 'transparent'; e.target.style.color = 'var(--text-secondary)'; }}
     >
       {label}
     </button>

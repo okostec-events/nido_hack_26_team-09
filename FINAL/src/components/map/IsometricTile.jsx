@@ -1,5 +1,5 @@
 import { memo, useMemo } from 'react';
-import { TILE_WIDTH, TILE_HEIGHT, HEIGHT_SCALE, gridToScreen } from '../../utils/isometric';
+import { TILE_WIDTH, TILE_HEIGHT, gridToScreen } from '../../utils/isometric';
 import { TERRAIN_COLORS, getOverlayColor } from '../../utils/colors';
 import TerrainProps from './TerrainProps';
 import InfrastructureIcon from './InfrastructureIcon';
@@ -24,80 +24,89 @@ const IsometricTile = memo(function IsometricTile({
 }) {
   const { x, y, terrain, elevation } = cell;
   const colors = TERRAIN_COLORS[terrain];
-  const h = elevation * HEIGHT_SCALE;
-  const hw = TILE_WIDTH / 2;
-  const hh = TILE_HEIGHT / 2;
 
-  // Top face diamond
-  const topPoints = `0,${-h} ${hw},${hh - h} 0,${TILE_HEIGHT - h} ${-hw},${hh - h}`;
-  // Left face
-  const leftPoints = `${-hw},${hh - h} 0,${TILE_HEIGHT - h} 0,${TILE_HEIGHT} ${-hw},${hh}`;
-  // Right face
-  const rightPoints = `0,${TILE_HEIGHT - h} ${hw},${hh - h} ${hw},${hh} 0,${TILE_HEIGHT}`;
-
-  // Screen position
+  // Screen position (top-left corner of tile)
   const { screenX, screenY } = gridToScreen(x, y, 0);
 
   // Overlay colors
   const overlayColor1 = overlays.length > 0 ? getOverlayValue(cell, overlays[0]) : null;
   const overlayColor2 = overlays.length > 1 ? getOverlayValue(cell, overlays[1]) : null;
 
-  // Water wave animation
   const isWater = terrain === 'water';
-
-  // Restricted hatch pattern id
   const hatchId = `hatch-${x}-${y}`;
 
-  // Hover lift offset
-  const hoverLift = isHovered ? 3 : 0;
+  // Elevation-based shade variation for more detail
+  const elevShade = useMemo(() => {
+    const factor = 0.85 + (elevation / 100) * 0.3;
+    return factor;
+  }, [elevation]);
+
+  // Terrain detail noise for fidelity
+  const rand = useMemo(() => seededRandTile(x, y), [x, y]);
+  const noiseVariation = useMemo(() => {
+    const v = rand();
+    return 0.92 + v * 0.16;
+  }, [rand]);
+
+  const baseColor = colors.base;
 
   return (
     <g
-      transform={`translate(${screenX}, ${screenY - hoverLift})`}
+      transform={`translate(${screenX}, ${screenY})`}
       onPointerEnter={onPointerEnter}
       onPointerLeave={onPointerLeave}
       onPointerUp={onPointerUp}
       style={{ cursor: 'pointer' }}
     >
-      {/* Left face */}
-      <polygon points={leftPoints} fill={colors.left} />
-      {/* Right face */}
-      <polygon points={rightPoints} fill={colors.right} />
-      {/* Top face */}
-      <polygon points={topPoints} fill={colors.base} />
+      {/* Base tile square */}
+      <rect
+        x={0} y={0}
+        width={TILE_WIDTH} height={TILE_HEIGHT}
+        fill={baseColor}
+        stroke="rgba(255,255,255,0.04)"
+        strokeWidth={0.5}
+      />
 
-      {/* Water shimmer */}
-      {isWater && <WaterTexture h={h} hw={hw} hh={hh} x={x} />}
+      {/* Elevation shading - subtle gradient for topographic feel */}
+      <rect
+        x={0} y={0}
+        width={TILE_WIDTH} height={TILE_HEIGHT}
+        fill={elevation > 50 ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)'}
+      />
 
-      {/* Land texture dots */}
-      {(terrain === 'land' || terrain === 'forest') && <LandTexture x={x} y={y} h={h} />}
+      {/* Terrain detail noise patch */}
+      {(terrain === 'land') && <LandDetail x={x} y={y} />}
 
-      {/* Urban grid pattern */}
-      {terrain === 'urban' && <UrbanTexture h={h} hw={hw} hh={hh} />}
+      {/* Water animation */}
+      {isWater && <WaterDetail x={x} y={y} />}
 
-      {/* Mountain surface lines */}
-      {terrain === 'mountain' && <MountainTexture h={h} />}
+      {/* Urban grid detail */}
+      {terrain === 'urban' && <UrbanDetail x={x} y={y} />}
+
+      {/* Mountain contour lines */}
+      {terrain === 'mountain' && <MountainDetail x={x} y={y} elevation={elevation} />}
+
+      {/* Forest canopy */}
+      {terrain === 'forest' && <ForestDetail x={x} y={y} />}
 
       {/* Overlay tint */}
       {overlayColor1 && !showCompare && (
-        <polygon points={topPoints} fill={overlayColor1} />
+        <rect x={0} y={0} width={TILE_WIDTH} height={TILE_HEIGHT} fill={overlayColor1} />
       )}
       {showCompare && overlayColor1 && overlayColor2 && (
         <>
-          {/* Split diagonal - left triangle */}
           <polygon
-            points={`0,${-h} ${-hw},${hh - h} 0,${TILE_HEIGHT - h}`}
+            points={`0,0 ${TILE_WIDTH},0 0,${TILE_HEIGHT}`}
             fill={overlayColor1}
           />
-          {/* Right triangle */}
           <polygon
-            points={`0,${-h} ${hw},${hh - h} 0,${TILE_HEIGHT - h}`}
+            points={`${TILE_WIDTH},0 ${TILE_WIDTH},${TILE_HEIGHT} 0,${TILE_HEIGHT}`}
             fill={overlayColor2}
           />
         </>
       )}
       {showCompare && overlayColor1 && !overlayColor2 && (
-        <polygon points={topPoints} fill={overlayColor1} />
+        <rect x={0} y={0} width={TILE_WIDTH} height={TILE_HEIGHT} fill={overlayColor1} />
       )}
 
       {/* Restricted hatch */}
@@ -108,112 +117,170 @@ const IsometricTile = memo(function IsometricTile({
               <line x1="0" y1="0" x2="0" y2="5" stroke="var(--accent-danger)" strokeWidth="2" opacity="0.25" />
             </pattern>
           </defs>
-          <polygon points={topPoints} fill={`url(#${hatchId})`} />
-          <text x={hw - 8} y={-h + 8} fontSize={8} fill="var(--accent-danger)" opacity={0.6}>⛔</text>
+          <rect x={0} y={0} width={TILE_WIDTH} height={TILE_HEIGHT} fill={`url(#${hatchId})`} />
+          <text x={TILE_WIDTH - 10} y={10} fontSize={8} fill="var(--accent-danger)" opacity={0.6}>⛔</text>
         </>
       )}
 
       {/* Terrain props (trees, mountains, buildings) */}
-      <g transform={`translate(0, ${hh - h - 2})`}>
+      <g transform={`translate(${TILE_WIDTH / 2}, ${TILE_HEIGHT / 2})`}>
         <TerrainProps terrain={terrain} x={x} y={y} />
       </g>
 
       {/* Placed infrastructure */}
       {cell.placedInfra && (
-        <g transform={`translate(0, ${hh - h - 2})`}>
+        <g transform={`translate(${TILE_WIDTH / 2}, ${TILE_HEIGHT / 2})`}>
           <InfrastructureIcon type={cell.placedInfra.type} cell={cell} />
         </g>
       )}
 
       {/* Hover highlight */}
       {isHovered && (
-        <>
-          <polygon
-            points={topPoints}
-            fill="rgba(255,255,255,0.08)"
-            stroke="rgba(0,230,118,0.5)"
-            strokeWidth={1.5}
-          />
-          {/* Glow under tile */}
-          <polygon
-            points={topPoints}
-            fill="none"
-            stroke="rgba(0,230,118,0.2)"
-            strokeWidth={3}
-            filter="url(#hoverGlow)"
-          />
-        </>
+        <rect
+          x={0} y={0}
+          width={TILE_WIDTH} height={TILE_HEIGHT}
+          fill="rgba(255,255,255,0.08)"
+          stroke="rgba(0,230,118,0.6)"
+          strokeWidth={2}
+        />
       )}
     </g>
   );
 });
 
-function WaterTexture({ h, hw, hh, x }) {
-  const offsets = [0.2, 0.4, 0.65, 0.8];
+function WaterDetail({ x, y }) {
+  const rand = seededRandTile(x + 200, y + 200);
+  const offsets = [0.25, 0.5, 0.75];
   return (
     <g>
       {offsets.map((frac, i) => {
-        const yPos = -h + (TILE_HEIGHT - 0) * frac;
-        const xRange = hw * (1 - Math.abs(frac - 0.5) * 2) * 0.8;
+        const yPos = TILE_HEIGHT * frac;
+        const xOff = rand() * 4;
         return (
           <line
             key={i}
-            x1={-xRange}
+            x1={4 + xOff}
             y1={yPos}
-            x2={xRange}
+            x2={TILE_WIDTH - 4 - xOff}
             y2={yPos}
-            stroke="rgba(255,255,255,0.1)"
-            strokeWidth={0.8}
+            stroke="rgba(100,180,255,0.15)"
+            strokeWidth={1}
             strokeLinecap="round"
           >
             <animateTransform
               attributeName="transform"
               type="translate"
-              values={`-3,0;3,0;-3,0`}
-              dur={`${6}s`}
-              begin={`${i * 1.5}s`}
+              values="-2,0;2,0;-2,0"
+              dur={`${5 + i}s`}
+              begin={`${i * 1.2}s`}
               repeatCount="indefinite"
             />
           </line>
         );
       })}
+      {/* Water shimmer dot */}
+      <circle cx={TILE_WIDTH * 0.3 + rand() * 10} cy={TILE_HEIGHT * 0.4} r={1} fill="rgba(150,220,255,0.2)">
+        <animate attributeName="opacity" values="0.1;0.3;0.1" dur="3s" repeatCount="indefinite" />
+      </circle>
     </g>
   );
 }
 
-function LandTexture({ x, y, h }) {
-  const rand = seededRandTile(x + 100, y + 100);
+function LandDetail({ x, y }) {
+  const rand = seededRandTile(x + 300, y + 300);
   const dots = [];
-  for (let i = 0; i < 3; i++) {
+  for (let i = 0; i < 5; i++) {
     dots.push(
       <circle
         key={i}
-        cx={(rand() - 0.5) * 20}
-        cy={-h + TILE_HEIGHT * 0.3 + rand() * TILE_HEIGHT * 0.4}
-        r={0.5}
-        fill="rgba(255,255,255,0.04)"
+        cx={4 + rand() * (TILE_WIDTH - 8)}
+        cy={4 + rand() * (TILE_HEIGHT - 8)}
+        r={0.6 + rand() * 0.5}
+        fill={rand() > 0.5 ? 'rgba(120,180,100,0.12)' : 'rgba(80,130,70,0.1)'}
+      />
+    );
+  }
+  // Subtle terrain texture lines
+  return (
+    <g>
+      {dots}
+      {rand() > 0.6 && (
+        <line
+          x1={6} y1={TILE_HEIGHT * 0.3 + rand() * 10}
+          x2={TILE_WIDTH - 6} y2={TILE_HEIGHT * 0.3 + rand() * 10 + 3}
+          stroke="rgba(100,160,80,0.06)"
+          strokeWidth={0.8}
+        />
+      )}
+    </g>
+  );
+}
+
+function UrbanDetail({ x, y }) {
+  const rand = seededRandTile(x + 400, y + 400);
+  // Road grid lines
+  return (
+    <g opacity={0.08}>
+      <line x1={TILE_WIDTH * 0.5} y1={2} x2={TILE_WIDTH * 0.5} y2={TILE_HEIGHT - 2} stroke="white" strokeWidth={0.8} />
+      <line x1={2} y1={TILE_HEIGHT * 0.5} x2={TILE_WIDTH - 2} y2={TILE_HEIGHT * 0.5} stroke="white" strokeWidth={0.8} />
+      {rand() > 0.5 && (
+        <rect
+          x={TILE_WIDTH * 0.15} y={TILE_HEIGHT * 0.15}
+          width={TILE_WIDTH * 0.25} height={TILE_HEIGHT * 0.25}
+          fill="rgba(255,220,100,0.15)"
+          rx={1}
+        />
+      )}
+    </g>
+  );
+}
+
+function MountainDetail({ x, y, elevation }) {
+  const rand = seededRandTile(x + 500, y + 500);
+  // Contour lines for elevation
+  return (
+    <g>
+      <line
+        x1={3} y1={TILE_HEIGHT * 0.3}
+        x2={TILE_WIDTH - 5} y2={TILE_HEIGHT * 0.35}
+        stroke="rgba(255,255,255,0.07)"
+        strokeWidth={0.6}
+      />
+      <line
+        x1={6} y1={TILE_HEIGHT * 0.6}
+        x2={TILE_WIDTH - 3} y2={TILE_HEIGHT * 0.55}
+        stroke="rgba(255,255,255,0.05)"
+        strokeWidth={0.6}
+      />
+      {elevation > 80 && (
+        <circle
+          cx={TILE_WIDTH * 0.5} cy={TILE_HEIGHT * 0.4}
+          r={3} fill="rgba(224,224,232,0.15)"
+        />
+      )}
+    </g>
+  );
+}
+
+function ForestDetail({ x, y }) {
+  const rand = seededRandTile(x + 600, y + 600);
+  // Canopy dots for top-down forest view
+  const dots = [];
+  for (let i = 0; i < 4; i++) {
+    const cx = 6 + rand() * (TILE_WIDTH - 12);
+    const cy = 6 + rand() * (TILE_HEIGHT - 12);
+    const r = 3 + rand() * 4;
+    dots.push(
+      <circle
+        key={i}
+        cx={cx} cy={cy} r={r}
+        fill={rand() > 0.5 ? 'rgba(30,80,40,0.35)' : 'rgba(45,107,63,0.3)'}
+        stroke="rgba(20,60,30,0.15)"
+        strokeWidth={0.3}
       />
     );
   }
   return <g>{dots}</g>;
-}
-
-function UrbanTexture({ h, hw, hh }) {
-  return (
-    <g opacity={0.05} stroke="white" strokeWidth={0.5}>
-      <line x1={-hw * 0.3} y1={hh * 0.3 - h} x2={hw * 0.3} y2={hh * 1.3 - h} />
-      <line x1={-hw * 0.6} y1={hh * 0.6 - h} x2={hw * 0.6} y2={hh * 0.6 - h} />
-    </g>
-  );
-}
-
-function MountainTexture({ h }) {
-  return (
-    <g stroke="rgba(255,255,255,0.08)" strokeWidth={0.8}>
-      <line x1={-5} y1={-h + 8} x2={-2} y2={-h + 5} />
-      <line x1={3} y1={-h + 10} x2={6} y2={-h + 7} />
-    </g>
-  );
 }
 
 function getOverlayValue(cell, overlay) {

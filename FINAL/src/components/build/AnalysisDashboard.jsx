@@ -118,7 +118,7 @@ export default function AnalysisDashboard({ scores, cells, onRemove, onNavigateB
 
       {/* Generate Report */}
       <PrimaryButton
-        disabled={placed.length < 3}
+        disabled={false}
         onClick={() => navigateTo('report')}
       >
         Generate Site Report →

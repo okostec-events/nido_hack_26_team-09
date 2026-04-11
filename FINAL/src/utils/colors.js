@@ -1,10 +1,10 @@
-// Terrain base colors
+// Terrain base colors (flat view - richer, more distinct)
 export const TERRAIN_COLORS = {
-  water: { base: '#14344A', left: '#0E2A3C', right: '#0A1F2E' },
-  land: { base: '#2A4A38', left: '#1E3828', right: '#162A1E' },
-  forest: { base: '#1B3B28', left: '#142B1E', right: '#0F2016' },
-  mountain: { base: '#4A4A5A', left: '#3A3A48', right: '#2A2A36' },
-  urban: { base: '#2D2D3D', left: '#222232', right: '#1A1A28' },
+  water: { base: '#1A4468', left: '#0E2A3C', right: '#0A1F2E' },
+  land: { base: '#2E5240', left: '#1E3828', right: '#162A1E' },
+  forest: { base: '#1F4430', left: '#142B1E', right: '#0F2016' },
+  mountain: { base: '#52526A', left: '#3A3A48', right: '#2A2A36' },
+  urban: { base: '#353548', left: '#222232', right: '#1A1A28' },
 };
 
 // Overlay color mapping (choropleth bands)
