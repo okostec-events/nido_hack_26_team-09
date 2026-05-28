@@ -1,29 +1,36 @@
 import { useState, useCallback } from 'react';
 import { getInfraDefinition } from '../data/infrastructure';
 
-const TOTAL_BUDGET = 1000;
+const DEFAULT_BUDGET = 1000;
 
 export function useBudget() {
-  const [budget, setBudget] = useState(TOTAL_BUDGET);
+  const [totalBudget, setTotalBudget] = useState(DEFAULT_BUDGET);
+  const [spent, setSpent] = useState(0);
+
+  const budget = totalBudget - spent;
 
   const spend = useCallback((type) => {
     const def = getInfraDefinition(type);
-    setBudget(prev => prev - def.cost);
+    if (def) setSpent(prev => prev + def.cost);
   }, []);
 
   const refund = useCallback((type) => {
     const def = getInfraDefinition(type);
-    setBudget(prev => Math.min(TOTAL_BUDGET, prev + def.cost));
+    if (def) setSpent(prev => Math.max(0, prev - def.cost));
   }, []);
 
   const canAfford = useCallback((type) => {
     const def = getInfraDefinition(type);
-    return budget >= def.cost;
+    return def && budget >= def.cost;
   }, [budget]);
 
   const reset = useCallback(() => {
-    setBudget(TOTAL_BUDGET);
+    setSpent(0);
   }, []);
 
-  return { budget, totalBudget: TOTAL_BUDGET, spend, refund, canAfford, reset };
+  const changeTotalBudget = useCallback((newTotal) => {
+    setTotalBudget(newTotal);
+  }, []);
+
+  return { budget, totalBudget, spent, spend, refund, canAfford, reset, changeTotalBudget };
 }
